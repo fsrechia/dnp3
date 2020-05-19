@@ -28,7 +28,11 @@ Publique o aplicativo no github, faça pequenos commits para indicar evolução 
 ## Prazo de entrega:
 23:59 22/05/2020
 
-## Referências:
+## Referências fornecidas:
 https://www.dnp.org/About/Overview-of-DNP3-Protocol
 https://www.electron.com.br/arquivos/artigos-tecnicos/dnp.pdf
 
+## Referências adicionais:
+https://en.wikipedia.org/wiki/DNP3 (overview)
+https://github.com/ITI/ICS-Security-Tools/tree/master/pcaps (capturas de pacotes DNP3 para facilitar o entendimento)
+https://www.ixiacom.com/company/blog/scada-distributed-network-protocol-dnp3 (diagrama do DNP3 sobre IP)
