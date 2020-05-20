@@ -1,21 +1,28 @@
+#ifndef  HEADER_CUSTOM_DNP3_H
+#define HEADER_CUSTOM_DNP3_H
+
+#define DNP3_SERVER_PORT 20000
+
 struct dnp3_link_layer {
-    unsigned short magic = 0x0564;
+    unsigned short magic;
     unsigned char len;
     unsigned char ctrl; // see definitions DNP3_LL_CTRL_* to understand how to use those bits
     unsigned short dst;
     unsigned short src;
     unsigned short crc;
-};
+} __attribute__((packed));
 
 /* Link layer control fields below are defined in 9.2.4.1.3 CONTROL field of the DNP3 standard */
-#define DNP3_LL_CTRL_DIR_BIT 0x80;        // 1 -> from master, 0 from outstation
-#define DNP3_LL_CTRL_PRM_BIT 0x40;        // 1 -> from primary to secondary, 0 from secondary to primary
-#define DNP3_LL_CTRL_FCB_BIT 0x20;        // 1 -> frame count bit (alternates 0 and 1)
-#define DNP3_LL_CTRL_FCV_OR_DFC_BIT 0x10; /* FCV - Frame count valid (1 -> examine FCB, 0 -> ignore FCB)
+#define DNP3_LL_CTRL_DIR_BIT 0x80        // 1 -> from master, 0 from outstation
+#define DNP3_LL_CTRL_PRM_BIT 0x40        // 1 -> from primary to secondary, 0 from secondary to primary
+#define DNP3_LL_CTRL_FCB_BIT 0x20        // 1 -> frame count bit (alternates 0 and 1)
+#define DNP3_LL_CTRL_FCV_OR_DFC_BIT 0x10
+                                          /* FCV - Frame count valid (1 -> examine FCB, 0 -> ignore FCB)
                                           * DFC - Data flow control (1 -> buffer full, 0 -> buffer available) 
                                           */
-#define DNP3_LL_CTRL_FC_BITS 0x0f;  /* LINK LAYER Function CODE bits (see section 9.2.4.1.3.6):
-                                    * 
+#define DNP3_LL_CTRL_FC_BITS 0x0f  
+                                    /* LINK LAYER Function CODE bits (see section 9.2.4.1.3.6):
+                                    
                                     * if PRM=1
                                     *      (Primary function code, Function code name, Service function, FCV bit, Response function codes permitted from Secondary Station)
                                     *      0, RESET_LINK_STATES, Reset of remote link, FCV 0, responses 0 or 1
@@ -32,19 +39,29 @@ struct dnp3_link_layer {
                                     */ 
 
 /* Transport layer control fields (this layer is a single byte) */
-#define DNP3_TL_FIN_BIT 0x80;   // 1-> Final fragment of the message
-#define DNP3_TL_FIR_BIT 0x40;   // 1-> First fragment of the message
-#define DNP3_TL_SEQ_BITS 0x3f;   // 6 bits used for sequentially numbering fragments
+#define DNP3_TL_FIN_BIT 0x80   // 1-> Final fragment of the message
+#define DNP3_TL_FIR_BIT 0x40   // 1-> First fragment of the message
+#define DNP3_TL_SEQ_BITS 0x3f   // 6 bits used for sequentially numbering fragments
 
 // TODO: I need to understand this better before specifying structures
-// app layer requests do not carry an internal indications field
+// app layer requests do not carry an internal indications field (responses do carry this field)
 struct dnp3_app_layer_ctrl_fc {
     unsigned char ctrl; // application control
     unsigned char fc;   // function code
-};
+} __attribute__((packed));
 
 struct dnp3_app_layer {
     struct dnp3_app_layer_ctrl_fc ctrlfc;   // application control + function code struct
     unsigned short indications;             // internal indications
     // TODO: add optional (zero or more) Object ranges?
-};
+} __attribute__((packed));
+
+struct dnp3_message_request {
+    struct dnp3_link_layer ll; //link layer
+    unsigned char tl; //transport layer
+    struct dnp3_app_layer_ctrl_fc al_ctrlfc; // app layer
+} __attribute__((packed));
+
+
+
+#endif // HEADER_CUSTOM_DNP3_H

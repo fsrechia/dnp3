@@ -1,6 +1,18 @@
 # Manual do usuário
 
-TODO
+How to compile and run:
+
+```
+make master
+make outstation
+./outstation    # in one terminal
+./master        # in another terminal
+```
+
+Clean up with `make clean`.
+
+At the moment it doesn't do much, just opens a socket and transmits garbage from
+one side to another. TODO: update this text.
 
 # Requisitos:
 ## Objetivo:

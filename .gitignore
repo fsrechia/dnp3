@@ -1,0 +1,6 @@
+*.o
+*.out
+outstation
+server
+client
+master
