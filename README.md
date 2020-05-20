@@ -5,8 +5,8 @@ TODO
 # Requisitos:
 ## Objetivo:
 
-    Desenvolver um programa que simule uma remota DNP3 que responda a função FC 01 (Read).
-    Ao enviar um telegrama o programa deverá executar as seguintes validações: CRC () e  o endereço da remota.
+- Desenvolver um programa que simule uma remota DNP3 que responda a função FC 01 (Read).
+- Ao enviar um telegrama o programa deverá executar as seguintes validações: CRC () e  o endereço da remota.
 
 Segue exemplo um exemplo de FC (01) do mestre a remota:
 
@@ -29,10 +29,10 @@ Publique o aplicativo no github, faça pequenos commits para indicar evolução 
 23:59 22/05/2020
 
 ## Referências fornecidas:
-https://www.dnp.org/About/Overview-of-DNP3-Protocol
-https://www.electron.com.br/arquivos/artigos-tecnicos/dnp.pdf
+- https://www.dnp.org/About/Overview-of-DNP3-Protocol
+- https://www.electron.com.br/arquivos/artigos-tecnicos/dnp.pdf
 
 ## Referências adicionais:
-https://en.wikipedia.org/wiki/DNP3 (overview)
-https://github.com/ITI/ICS-Security-Tools/tree/master/pcaps (capturas de pacotes DNP3 para facilitar o entendimento)
-https://www.ixiacom.com/company/blog/scada-distributed-network-protocol-dnp3 (diagrama do DNP3 sobre IP)
+- https://en.wikipedia.org/wiki/DNP3 (overview)
+- https://github.com/ITI/ICS-Security-Tools/tree/master/pcaps (capturas de pacotes DNP3 para facilitar o entendimento)
+- https://www.ixiacom.com/company/blog/scada-distributed-network-protocol-dnp3 (diagrama do DNP3 sobre IP)
