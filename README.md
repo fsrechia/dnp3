@@ -24,7 +24,20 @@ Segue exemplo um exemplo de FC (01) do mestre a remota:
 
 ### Envio do mestre:
 
-    0x05 0x64 0x0b 0xc4 0x46 0x00 0x40 0x00 0xa3 0xfe 0xd0 0xcd 0x01 0x3c 0x02 0x06 0xc2 0x62
+    link layer magic: 0x05 0x64
+    link layer len: 0x0b
+    link layer ctrl: 0xc4
+    link layer dst: 0x46 0x00
+    link layer src: 0x40 0x00
+    link layer crc: 0xa3 0xfe
+    transport layer: 0xd0
+    APP data chunk:
+       |  app layer ctrl:           0xcd
+       |  app layer function code:  0x01 (read)
+       |  object type group:        0x3c (Object group 60)
+       |  object type variation:    0x02 (variation 2)
+       |  qualifier field:          0x06 (always 0x06, see A26.1.2.1)
+       |  CRC: 0xc2 0x62
 
 ### Resposta da remota:
 

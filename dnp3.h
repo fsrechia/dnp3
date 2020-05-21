@@ -45,21 +45,44 @@ struct dnp3_link_layer {
 
 // TODO: I need to understand this better before specifying structures
 // app layer requests do not carry an internal indications field (responses do carry this field)
-struct dnp3_app_layer_ctrl_fc {
+struct dnp3_app_layer_header {
     unsigned char ctrl; // application control
     unsigned char fc;   // function code
 } __attribute__((packed));
 
+/* Application layer control fields */
+#define DNP3_AL_FIN_BIT 0x80   // 1-> Final fragment of the message
+#define DNP3_AL_FIR_BIT 0x40   // 1-> First fragment of the message
+#define DNP3_AL_CON_BIT 0x20   // Confirm bit
+#define DNP3_AL_UNS_BIT 0x10   // Unsolicited bit
+#define DNP3_AL_SEQ_BIT 0x0f   // 4 bits used for numbering app-level fragments
+
+/* Application layer function codes fields (this layer is a single byte) 
+ * see DNP3 document section 4.2.2.5 for more details on other Function code octets
+ */
+#define DNP3_AL_FC_CONFIRM  0x00   // Confirmation - Confirm Function Code
+#define DNP3_AL_FC_READ     0x01   // Request - Read Function Code
+#define DNP3_AL_FC_WRITE    0x02   // Request - Write Function Code
+#define DNP3_AL_FC_RESPONSE 0x81   // Response - Solicited Response
+
+struct dnp3_class_object_header {
+    unsigned char type_group;
+    unsigned char type_variation;
+    unsigned char qualifier;
+} __attribute__((packed));
+
 struct dnp3_app_layer {
-    struct dnp3_app_layer_ctrl_fc ctrlfc;   // application control + function code struct
-    unsigned short indications;             // internal indications
+    struct dnp3_app_layer_header al_header;   // application control + function code struct
+    unsigned short indications;               // internal indications
     // TODO: add optional (zero or more) Object ranges?
 } __attribute__((packed));
 
-struct dnp3_message_request {
-    struct dnp3_link_layer ll; //link layer
-    unsigned char tl; //transport layer
-    struct dnp3_app_layer_ctrl_fc al_ctrlfc; // app layer
+struct dnp3_message_read_request {
+    struct dnp3_link_layer ll;              //link layer
+    unsigned char tl;                       //transport layer
+    struct dnp3_app_layer_header al_header; // app layer
+    struct dnp3_class_object_header al_obj; // app layer object
+    unsigned short app_crc;
 } __attribute__((packed));
 
 

@@ -11,8 +11,9 @@ int main(int argc, char const *argv[])
 {
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
-    struct dnp3_message_request dnp3_message;
-    char buffer[1024] = {0};
+    struct dnp3_message_read_request dnp3_message;
+    char rcvbuffer[1024] = {0};
+    
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -35,20 +36,25 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    memset(&dnp3_message, 0, sizeof(struct dnp3_message_request));
+    memset(&dnp3_message, 0, sizeof(struct dnp3_message_read_request));
     // based on 0x05 0x64 0x0b 0xc4 0x46 0x00 0x40 0x00 0xa3 0xfe 0xd0 0xcd 0x01 0x3c 0x02 0x06 0xc2 0x62
     dnp3_message.ll.magic = htons(0x0564);
     dnp3_message.ll.len = 0x0b; // 11 bytes
     dnp3_message.ll.ctrl = 0xc4; // Control: DIR, PRM, Unconfirmed User Data
     dnp3_message.ll.dst = htons(0x4600); // destination
     dnp3_message.ll.src = htons(0x4000); // source
-    dnp3_message.ll.crc = htons(0xefef); // wrong CRC just for testing now
+    dnp3_message.ll.crc = htons(0xa3fe); // wrong CRC just for testing now
     dnp3_message.tl = (DNP3_TL_FIN_BIT | DNP3_TL_FIR_BIT | (DNP3_TL_SEQ_BITS & 0)); // set FIN / FIR and SEQ BITS
-    // TODO append application layer, calculate CRC
+    dnp3_message.al_header.ctrl = (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT | (DNP3_AL_SEQ_BIT & 0));
+    dnp3_message.al_header.fc = DNP3_AL_FC_READ;
+    dnp3_message.al_obj.type_group = 0x34;
+    dnp3_message.al_obj.type_variation = 0x01;
+    dnp3_message.al_obj.qualifier = 0x06;
+    dnp3_message.app_crc = htons(0xc262);
 
-    send(sock , &dnp3_message , sizeof(struct dnp3_message_request) , 0 );
+    send(sock , &dnp3_message , sizeof(struct dnp3_message_read_request) , 0 );
     printf("DNP3 request sent\n");
-    valread = read( sock , buffer, 1024);
-    printf("%s\n",buffer );
+    valread = read( sock , rcvbuffer, 1024);
+    printf("%s\n",rcvbuffer );
     return 0;
 }
