@@ -2,6 +2,11 @@
 #define HEADER_CUSTOM_DNP3_H
 
 #define DNP3_SERVER_PORT 20000
+#define REVPOLY 0xA6BC // Reverse polynomial from IEEE DNP3 standard
+
+/************************************************************************
+Layer structures and control bit field definitions
+************************************************************************/
 
 struct dnp3_link_layer {
     unsigned short magic;
@@ -11,6 +16,8 @@ struct dnp3_link_layer {
     unsigned short src;
     unsigned short crc;
 } __attribute__((packed));
+
+#define DNP3_MAGIC_SYNC_WORD 0x0564
 
 /* Link layer control fields below are defined in 9.2.4.1.3 CONTROL field of the DNP3 standard */
 #define DNP3_LL_CTRL_DIR_BIT 0x80        // 1 -> from master, 0 from outstation
@@ -71,12 +78,6 @@ struct dnp3_class_object_header {
     unsigned char qualifier;
 } __attribute__((packed));
 
-struct dnp3_app_layer {
-    struct dnp3_app_layer_header al_header;   // application control + function code struct
-    unsigned short indications;               // internal indications
-    // TODO: add optional (zero or more) Object ranges?
-} __attribute__((packed));
-
 struct dnp3_message_read_request {
     struct dnp3_link_layer ll;              //link layer
     unsigned char tl;                       //transport layer
@@ -85,6 +86,18 @@ struct dnp3_message_read_request {
     unsigned short app_crc;
 } __attribute__((packed));
 
+struct dnp3_message_read_response {
+    struct dnp3_app_layer_header al_header;   // application control + function code struct
+    unsigned short indications;               // internal indications
+    // TODO: add optional (zero or more) Object ranges?
+} __attribute__((packed));
 
+/************************************************************************
+DNP3 function prototypes
+************************************************************************/
+
+void computeCRC(unsigned char, unsigned short*);
+int encode_dnp3_message(struct dnp3_message_read_request*);
+int validate_rx_link_layer(unsigned char*, struct dnp3_message_read_request*);
 
 #endif // HEADER_CUSTOM_DNP3_H

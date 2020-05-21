@@ -3,7 +3,7 @@ This function illustrates how to compute the CRC and check it for a
 received data block.
 **************************************************************************/
 
-int main() {
+int dnp3_message_rx() {
     short idx; // Index
     unsigned char dataBlock[18]; // Array to hold received data block
     short blockSize; // Size of data block, not including CRC octets

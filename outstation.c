@@ -11,11 +11,11 @@
 #define BUFF_SIZE 1024
 
 int main(int argc, char const *argv[]) {
-    int server_fd, dnp3_socket, valread;
+    int server_fd, dnp3_socket, bytesread;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
-    char buffer[BUFF_SIZE] = {0};
+    unsigned char buffer[BUFF_SIZE] = {0};
     char *response = "I got your message!";
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -50,8 +50,11 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    valread = read(dnp3_socket, buffer, BUFF_SIZE);
-    printf("Message Received\n");
+
+    bytesread = read(dnp3_socket, buffer, BUFF_SIZE);
+    printf("Message Received (%d bytes)...\n", bytesread);
+    struct dnp3_message_read_request rx_msg;
+    validate_rx_link_layer(buffer, &rx_msg);
     // TODO implement printing received message header to facilitate debugging
     // or just use wireshark
     send(dnp3_socket, response, strlen(response), 0);
