@@ -43,14 +43,14 @@ int main(int argc, char const *argv[])
     dnp3_message.ll.ctrl = 0xc4; // Control: DIR, PRM, Unconfirmed User Data
     dnp3_message.ll.dst = htons(0x4600); // destination
     dnp3_message.ll.src = htons(0x4000); // source
-    dnp3_message.ll.crc = htons(0xa3fe); // wrong CRC just for testing now
+    dnp3_message.ll.crc = htons(0xa3fe); // just copy CRC from sample packet
     dnp3_message.tl = (DNP3_TL_FIN_BIT | DNP3_TL_FIR_BIT | (DNP3_TL_SEQ_BITS & 0)); // set FIN / FIR and SEQ BITS
-    dnp3_message.al_header.ctrl = (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT | (DNP3_AL_SEQ_BIT & 0));
+    dnp3_message.al_header.ctrl = (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT | 0xd);
     dnp3_message.al_header.fc = DNP3_AL_FC_READ;
-    dnp3_message.al_obj.type_group = 0x34;
+    dnp3_message.al_obj.type_group = 0x3c;
     dnp3_message.al_obj.type_variation = 0x01;
     dnp3_message.al_obj.qualifier = 0x06;
-    dnp3_message.app_crc = htons(0xc262);
+    dnp3_message.app_crc = htons(0xa8aa); // just copy CRC from sample packet
 
     send(sock , &dnp3_message , sizeof(struct dnp3_message_read_request) , 0 );
     printf("DNP3 request sent\n");
