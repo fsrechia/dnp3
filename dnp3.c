@@ -4,16 +4,6 @@
 #include <arpa/inet.h>
 #include "dnp3.h"
 
-#ifndef __DEBUG__
-#define __DEBUG__
-
-#ifdef DEBUG
-#define debug(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
-#else
-#define debug(fmt, ...) ((void)0)
-#endif /* DEBUG */
-
-#endif /* __DEBUG__ */
 
 /************************************************************************
 This function updates the contents of *crcAccum using right shifts for
@@ -35,8 +25,99 @@ void computeCRC(unsigned char dataOctet, unsigned short *crcAccum) {
     }
 } /* end computeCRC() */
 
-int encode_dnp3_message(struct dnp3_message_read_request* dnp3_msg) {
+/**************************************************************************
+This function illustrates how to compute the CRC and append it to a data
+block for transmission. (based on example from IEEE Std 1815-2012 - Annex E)
+**************************************************************************/
+int appendCRC(unsigned char* srcbuffer, unsigned short srclen, unsigned char* dstbuffer) {
+    // TODO: tidy up this spaghetti code... it can be made a lot clearer
+    short i, j; // Indexes
+    short blockSize = 16; // Size of data block, not including CRC octets
+    unsigned short crc; // 16-bit check code (crc accumulator)
+    unsigned short whole_chunks = (unsigned short) (srclen / 16);
+    unsigned short remaining_bytes = srclen % 16;
+    unsigned short newlength = (whole_chunks * 18);
+    debug("appendCRC - whole_chunks: %hu, remaining_bytes: %hu\n",whole_chunks,remaining_bytes);
+
+    for (i = 0; i < whole_chunks; i++) {
+        memcpy(dstbuffer + i*(blockSize + 2), srcbuffer + i*blockSize, blockSize);
+        // Compute check code
+        crc = 0; // Initialize
+        for (j = i*blockSize; j < (i + 1)*blockSize; j++) {
+            computeCRC(dstbuffer[j],&crc);
+        }
+        crc = ~crc; // Invert
+        // Append CRC to end of block
+        dstbuffer[j++] = (unsigned char)crc;
+        dstbuffer[j] = (unsigned char)(crc >> 8);
+    }
+    // process remaining bytes for last blocksize < 16 bytes
+    if (remaining_bytes > 0) {
+        newlength += remaining_bytes + 2;
+        debug("dstbuffer offset = %hu\n", i*(blockSize + 2));
+        debug("srcbuffer offset = %hu\n", i*(blockSize));
+        memcpy(dstbuffer + (i*(blockSize + 2)), srcbuffer + (i*blockSize), remaining_bytes);
+        // Compute check code
+        crc = 0; // Initialize
+        for (j = i*(blockSize + 2); j < i*(blockSize + 2) + remaining_bytes; j++) {
+            debug("dstbuffer[%d] %02x\n", j, dstbuffer[j]);
+            computeCRC(dstbuffer[j],&crc);
+        }
+        crc = ~crc; // Invert
+        // Append CRC to end of block
+        dstbuffer[j++] = (unsigned char)crc;
+        dstbuffer[j] = (unsigned char)(crc >> 8);
+    }
+
+    return newlength;
+}
+
+int encode_dnp3_read_req_message(struct dnp3_message_read_request* dnp3_msg) {
     return 0;
+}
+
+int encode_dnp3_read_resp_message(
+    struct dnp3_message_read_response* dnp3_msg,
+    unsigned short src,
+    unsigned short dst,
+    unsigned char* buffer
+    )
+{
+    // dummy app layer object list response without CRCs embedded
+    unsigned char app_layer_objs[] = {
+    //0xed, 0x81,
+    //0x06, 0x00,
+    0x04, 0x02, 0x28, 0x04, 0x00, 0xe0, 0x00, 0x81, 0x99,
+    0xd7, 0x74, 0xbd, 0xc2, 0x10, 0x72, 0x01, 0xdc, 0x00, 0x81, 0x99, 0xd7, 0x74,
+    0x10, 0x72, 0x01, 0xdf, 0x00, 0x81, 0x99, 0x1e, 0x9a, 0xd7, 0x74, 0x10, 0x72,
+    0x01, 0xe1, 0x00, 0x81, 0x99, 0xd7, 0x74, 0x10, 0x72, 0x01, 0xbd, 0xf5};
+    unsigned short ll_crc;
+    // debug("dnp3_message_read_response length: %d (%02x)\n", sizeof(struct dnp3_message_read_response), sizeof(struct dnp3_message_read_response));
+    // debug("app_layer_objs length: %d (%02x)\n", sizeof(app_layer_objs), sizeof(app_layer_objs));
+    int length = sizeof(struct dnp3_message_read_response) + sizeof(app_layer_objs);
+    // debug("total msg length, including CRCs: %d (%02x)\n", length, length);
+
+    unsigned short ll_len = sizeof(app_layer_objs) + 5;
+    // debug("ll_len field: %d (%02x)\n", ll_len, ll_len);
+
+    memset(dnp3_msg, 0, sizeof(struct dnp3_message_read_response));
+    dnp3_msg->ll.magic = htons(0x0564);
+    dnp3_msg->ll.len = ll_len;
+    dnp3_msg->ll.src = htons(src);
+    dnp3_msg->ll.dst = htons(dst);
+    dnp3_msg->ll.ctrl = DNP3_LL_CTRL_PRM_BIT | (DNP3_LL_CTRL_FC_BITS & 4); // UNCONFIRMED_USER_DATA
+    generate_crc((unsigned char*)dnp3_msg, 8, &ll_crc);
+    debug("Header CRC: %04x\n", htons(ll_crc));
+    dnp3_msg->ll.crc = htons(ll_crc);
+    dnp3_msg->tl = DNP3_TL_FIN_BIT | DNP3_TL_FIR_BIT | 1;
+    dnp3_msg->al_header.ctrl = 0xed; // (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT);
+    dnp3_msg->al_header.fc = DNP3_AL_FC_RESPONSE;
+    dnp3_msg->indications = htons(0x0600);
+
+    memcpy(buffer, dnp3_msg, sizeof(struct dnp3_message_read_response));
+    memcpy(buffer + sizeof(struct dnp3_message_read_response), app_layer_objs, sizeof(app_layer_objs));
+
+    return length;
 }
 
 int generate_crc(
@@ -57,10 +138,12 @@ int generate_crc(
     return 0;
 }
 
+
+
 int validate_rx_link_layer(
         const unsigned char* buffer,
         struct dnp3_message_read_request* dnp3_msg,
-        const unsigned short* local_address
+        const unsigned short* exp_dst_address
         )
 {
     // copy buffer onto dnp3_msg and validate CRC
@@ -92,12 +175,17 @@ int validate_rx_link_layer(
     dnp3_msg->ll.crc = ntohs(dnp3_msg->ll.crc);
 
     // validate destination address
-    if (dnp3_msg->ll.dst != *local_address) {
-        debug("Dest Address: %hu, Our Address %hu\n",
-             dnp3_msg->ll.dst, *local_address);
+    if ( (dnp3_msg->ll.dst != *exp_dst_address) &&
+         (dnp3_msg->ll.dst <= 0xfffc) // special addresses
+    ) {
+        debug("Dest Address: %hu, Expected Address %hu or special addresses\n",
+             dnp3_msg->ll.dst, *exp_dst_address);
         errno = ENXIO;
         return -ENXIO;
     }
+
+    // TODO: more validation must be done according to Section 9.2.9 of
+    // DNP3 standard.
 
     return 0;
 }

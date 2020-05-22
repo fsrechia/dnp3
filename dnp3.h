@@ -4,6 +4,18 @@
 #define DNP3_SERVER_PORT 20000
 #define REVPOLY 0xA6BC // Reverse polynomial from IEEE DNP3 standard
 
+#ifndef __DEBUG__
+#define __DEBUG__
+
+#ifdef DEBUG
+#define debug(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+#else
+#define debug(fmt, ...) ((void)0)
+#endif /* DEBUG */
+
+#endif /* __DEBUG__ */
+
+
 /************************************************************************
 Layer structures and control bit field definitions
 ************************************************************************/
@@ -87,17 +99,21 @@ struct dnp3_message_read_request {
 } __attribute__((packed));
 
 struct dnp3_message_read_response {
+    struct dnp3_link_layer ll;                //link layer
+    unsigned char tl;                         //transport layer
     struct dnp3_app_layer_header al_header;   // application control + function code struct
     unsigned short indications;               // internal indications
-    // TODO: add optional (zero or more) Object ranges?
 } __attribute__((packed));
 
 /************************************************************************
 DNP3 function prototypes
 ************************************************************************/
 
+int appendCRC(unsigned char* srcbuffer, unsigned short srclen, unsigned char* dstbuffer);
 void computeCRC(unsigned char, unsigned short*);
-int encode_dnp3_message(struct dnp3_message_read_request*);
+int encode_dnp3_read_req_message(struct dnp3_message_read_request*);
+int encode_dnp3_read_resp_message(struct dnp3_message_read_response* msg,
+                    unsigned short s, unsigned short d, unsigned char* buff);
 int generate_crc(unsigned char*, unsigned short, unsigned short*);
 int validate_rx_link_layer(const unsigned char*, struct dnp3_message_read_request*,
                            const unsigned short*);

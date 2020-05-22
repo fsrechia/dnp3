@@ -18,7 +18,6 @@ int main(int argc, char const *argv[]) {
     unsigned char buffer[BUFF_SIZE] = {0};
     unsigned short dnp3_local_address=0x4600;
     struct dnp3_message_read_request rx_msg;
-    char *response = "I got your message!";
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket creation failed");
@@ -57,9 +56,18 @@ int main(int argc, char const *argv[]) {
     printf("Message Received (%d bytes)...\n", bytesread);
     if (validate_rx_link_layer(buffer, &rx_msg, &dnp3_local_address) < 0) {
         perror("DNP3 link layer validation failed");
+    } else {
+        printf("DNP3 link layer OK!\n");
+        printf("Crafting response packet!\n");
+        memset(buffer, 0, BUFF_SIZE);
+        struct dnp3_message_read_response tx_msg;
+        int length;
+        length = encode_dnp3_read_resp_message(&tx_msg, dnp3_local_address,
+                                rx_msg.ll.src, buffer);
+        send(dnp3_socket, buffer, length, 0);
+        printf("Response message sent\n");
     }
-    send(dnp3_socket, response, strlen(response), 0);
-    printf("Response message sent\n");
+
 
     return 0;
 
