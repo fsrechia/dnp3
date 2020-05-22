@@ -92,6 +92,35 @@ The following fields are hard-coded into the programs:
  - The outstation socket binds to any IPv4 address (`INADDR_ANY`). This was only tested with loopback address, though;
  - The master program attempts to connect to loopback IPv4 address only;
 
+## Sample execution
+
+Outstation (execute this first):
+```
+$ make all && ./outstation 98
+gcc -o outstation dnp3.o outstation.o
+gcc -o master dnp3.o master.o
+gcc -o tests dnp3.o tests.o
+Local address is 98
+Message Received (18 bytes)...
+Valid frame received from 65519 to 98
+DNP3 link layer OK!
+Crafting response packet!
+appendCRC - whole_chunks: 1, remaining_bytes: 4
+Response message sent
+```
+
+Master:
+```
+$ ./master 65519 98
+Local master address is 65519
+Outstation address is 98
+DNP3 request sent
+Received 34 bytes
+```
+
+
+
+
 # Requirements (in portuguese)
 ## Objetivo
 
