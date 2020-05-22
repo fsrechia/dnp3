@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <errno.h>
 #include "dnp3.h"
 
 #define BUFF_SIZE 1024
@@ -16,7 +17,17 @@ int main(int argc, char const *argv[]) {
     int opt = 1;
     int addrlen = sizeof(address);
     unsigned char buffer[BUFF_SIZE] = {0};
-    unsigned short dnp3_local_address=0x4600;
+    unsigned short dnp3_local_address=0x46;
+    if( argc == 2 ) {
+      dnp3_local_address = atoi(argv[1]);
+    }
+    printf("Local address is %hu\n", dnp3_local_address);
+    if (dnp3_local_address >= 65520)
+    {
+        errno = EINVAL;
+        perror("Invalid local address configured");
+        exit(EXIT_FAILURE);
+    }
     struct dnp3_message_read_request rx_msg;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -64,10 +75,15 @@ int main(int argc, char const *argv[]) {
         int length;
         length = encode_dnp3_read_resp_message(&tx_msg, dnp3_local_address,
                                 rx_msg.ll.src, buffer);
-        send(dnp3_socket, buffer, length, 0);
-        printf("Response message sent\n");
+        if (length < 0) {
+            perror("Error in the output message");
+        } else {
+            send(dnp3_socket, buffer, length, 0);
+            printf("Response message sent\n");
+        }
     }
 
+    close(server_fd);
 
     return 0;
 

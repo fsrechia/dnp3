@@ -12,9 +12,12 @@ make master
 ```
 
 This is what happens during execution:
-1. When `./outstation` is executed, the outstation starts and listens on `127.0.0.1:20000 (TCP)`;
-2. After `./master` is executed, it connects to the `127.0.0.1:20000` socket and
-sends a DNP3 read request with function code 01 with the following settings
+1. When `./outstation [local_address]` is executed, the outstation starts and listens on `127.0.0.1:20000 (TCP)`. The `local_address` is optional, and if not given will default to `70`;
+2. After `./master [local_address remote_address]` is executed, it connects to the `127.0.0.1:20000` socket and sends a DNP3 read request with function code 01 from `local_address` to `remote_address`.
+    - The address configuration is optional and defaults to `64` and `70` respectively.
+    - The master program does not validate addresses and can be used for testing invalid addresses
+    - The outstation program validates source and destination addresses. It should not be possible to use invalid addresses in this program.
+3. The following settings illustrate the read request sent.
 
 ```
     Distributed Network Protocol 3.0
@@ -39,27 +42,21 @@ sends a DNP3 read request with function code 01 with the following settings
                 Object(s): Class 0 Data (Obj:60, Var:01) (0x3c01)
 ```
 
-3. The outstation receives this and calls `validate_rx_link_layer` function to validate the received frame. The following checks are done in this order:
+4. The outstation receives this and calls `validate_rx_link_layer` function to validate the received frame. The following checks are done in this order:
     - Validation of link layer CRC;
     - Validation of frame magic number (0x0564);
     - Conversion from network to host order of dst, src parameters;
     - Validation of destination addresses (must match local address or special addresses from `0xfffc` to `0xffff`)
     - TODO: validation of above layers (received user data) is still not done.
 
-4. If the outstation considers the frame minimally valid (see checks above), it replies with a frame crafted by the `encode_dnp3_read_resp_message` function. The lower link layer is filled out with the following data:
+5. If the outstation considers the frame minimally valid (see checks above), it replies with a frame crafted by the `encode_dnp3_read_resp_message` function. The lower link layer is filled out with the following data:
     - magic number, length, and control flags
     - `source = <local address>`;
     - `destination = <source address of the previously received frame>`;
 
-5. Still in the `encode_dnp3_read_resp_message` multiple CRCs are calculated for 16-byte blocks of a dummy application layer. Finally, the link layer + user data is copied to an output buffer which is then sent back to the master through the established TCP socket.
+6. Still in the `encode_dnp3_read_resp_message` multiple CRCs are calculated for 16-byte blocks of a dummy application layer. Finally, the link layer + user data is copied to an output buffer which is then sent back to the master through the established TCP socket. The outstation source address is validated at the beginning of program execution and does not need to be validated before transmission.
 
-At the moment the READ RESPONSE sent from the outstation to the master is not recognized as a DNP3.0 packet by wireshark, there are still improvements to be made.
-
-Most configurable fields are hard-coded into the programs:
- - Master DNP3 link layer address is 64;
- - Outstation DNP3 link layer address is 70;
- - The outstation socket binds to any IPv4 address;
- - The master socket connects to loopback address;
+## Tests and debugs
 
 To run unit tests:
 
@@ -74,7 +71,6 @@ Clean up with `make clean`. A DEBUG flag may be enabled in the Makefile by addin
 
 ```diff
 diff --git a/Makefile b/Makefile
-index 90c62ea..31c33a2 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -1,5 +1,6 @@
@@ -85,6 +81,16 @@ index 90c62ea..31c33a2 100644
 
  %.o: %.c $(DEPS)
 ```
+
+## Known restrictions
+
+At the moment the READ RESPONSE sent from the outstation to the master is not recognized as a DNP3.0 packet by wireshark, there are still improvements to be made.
+
+The application layer was not developed and is mostly configured through static buffers.
+
+The following fields are hard-coded into the programs:
+ - The outstation socket binds to any IPv4 address (`INADDR_ANY`). This was only tested with loopback address, though;
+ - The master program attempts to connect to loopback IPv4 address only;
 
 # Requirements (in portuguese)
 ## Objetivo

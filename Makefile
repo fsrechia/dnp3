@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. -Wall
+CFLAGS=-I. -Wall -DDEBUG
 DEPS = dnp3.h dnp3.c
 
 %.o: %.c $(DEPS)

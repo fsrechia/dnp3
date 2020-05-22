@@ -13,7 +13,15 @@ int main(int argc, char const *argv[])
     struct sockaddr_in serv_addr;
     struct dnp3_message_read_request dnp3_message;
     char rcvbuffer[1024] = {0};
-
+    unsigned short ll_crc;
+    unsigned short dnp3_master_address=0x40;
+    unsigned short dnp3_outstation_address=0x46;
+    if( argc == 3 ) {
+      dnp3_master_address = atoi(argv[1]);
+      dnp3_outstation_address = atoi(argv[2]);
+    }
+    printf("Local master address is %hu\n", dnp3_master_address);
+    printf("Outstation address is %hu\n", dnp3_outstation_address);
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -41,9 +49,10 @@ int main(int argc, char const *argv[])
     dnp3_message.ll.magic = htons(0x0564);
     dnp3_message.ll.len = 0x0b; // 11 bytes
     dnp3_message.ll.ctrl = 0xc4; // Control: DIR, PRM, Unconfirmed User Data
-    dnp3_message.ll.dst = htons(0x4600); // destination
-    dnp3_message.ll.src = htons(0x4000); // source
-    dnp3_message.ll.crc = htons(0xa3fe); // just copy CRC from sample packet
+    dnp3_message.ll.dst = htons(dnp3_outstation_address); // destination
+    dnp3_message.ll.src = htons(dnp3_master_address); // source
+    generate_crc((unsigned char*)&dnp3_message, 8, &ll_crc);
+    dnp3_message.ll.crc = ll_crc; // just copy CRC from sample packet
     dnp3_message.tl = (DNP3_TL_FIN_BIT | DNP3_TL_FIR_BIT | (DNP3_TL_SEQ_BITS & 0)); // set FIN / FIR and SEQ BITS
     dnp3_message.al_header.ctrl = (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT | 0xd);
     dnp3_message.al_header.fc = DNP3_AL_FC_READ;
@@ -56,5 +65,8 @@ int main(int argc, char const *argv[])
     printf("DNP3 request sent\n");
     bytesread = read( sock , rcvbuffer, 1024);
     printf("Received %d bytes\n", bytesread);
+
+    close(sock);
+
     return 0;
 }

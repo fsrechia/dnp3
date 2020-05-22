@@ -80,6 +80,10 @@ int encode_dnp3_read_resp_message(
     unsigned char* outbuffer
     )
 {
+    if ((src > 0xFFEF) || (dst > 0xFFEF)) {
+        errno = EINVAL;
+        return -1;
+    }
     // dummy user data = transport + app layer object list response without CRCs embedded
     unsigned char user_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x00,
@@ -139,7 +143,7 @@ int generate_crc(
 int validate_rx_link_layer(
         const unsigned char* buffer,
         struct dnp3_message_read_request* dnp3_msg,
-        const unsigned short* exp_dst_address
+        const unsigned short* our_addr
         )
 {
     // copy buffer onto dnp3_msg and validate CRC
@@ -169,17 +173,31 @@ int validate_rx_link_layer(
     dnp3_msg->ll.dst = ntohs(dnp3_msg->ll.dst);
     dnp3_msg->ll.src = ntohs(dnp3_msg->ll.src);
     dnp3_msg->ll.crc = ntohs(dnp3_msg->ll.crc);
+    unsigned short dst = dnp3_msg->ll.dst;
+
+
+    // validate source address
+    if ( (dnp3_msg->ll.src == *our_addr) ||
+         (dnp3_msg->ll.src > 65519)
+    ) {
+        printf("Invalid source address detected: %hu (%04x)\n",
+            dnp3_msg->ll.src, dnp3_msg->ll.src);
+        errno = EINVAL;
+        return -EINVAL;
+    }
 
     // validate destination address
-    if ( (dnp3_msg->ll.dst != *exp_dst_address) &&
-         (dnp3_msg->ll.dst <= 0xfffc) // special addresses
+    if (  ((dst <= 65531) && (dst >= 65520)) ||
+          ((dst != *our_addr) && (dst < 65532))
     ) {
-        debug("Dest Address: %hu, Expected Address %hu or special addresses\n",
-             dnp3_msg->ll.dst, *exp_dst_address);
+        printf("Invalid dest address: %hu (%04x)\n", dnp3_msg->ll.dst, dnp3_msg->ll.dst);
+        printf("Expected %hu (%04x) or valid special addresses\n",
+                *our_addr, *our_addr);
         errno = ENXIO;
         return -ENXIO;
     }
-
+    printf("Valid frame received from %hu to %hu\n",
+            dnp3_msg->ll.src, dnp3_msg->ll.dst);
     // TODO: more validation must be done according to Section 9.2.9 of
     // DNP3 standard.
 
