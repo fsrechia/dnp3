@@ -9,11 +9,11 @@
 
 int main(int argc, char const *argv[])
 {
-    int sock = 0, valread;
+    int sock = 0, bytesread;
     struct sockaddr_in serv_addr;
     struct dnp3_message_read_request dnp3_message;
     char rcvbuffer[1024] = {0};
-    
+
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -54,7 +54,7 @@ int main(int argc, char const *argv[])
 
     send(sock , &dnp3_message , sizeof(struct dnp3_message_read_request) , 0 );
     printf("DNP3 request sent\n");
-    valread = read( sock , rcvbuffer, 1024);
-    printf("%s\n",rcvbuffer );
+    bytesread = read( sock , rcvbuffer, 1024);
+    printf("Received %d bytes\n", bytesread);
     return 0;
 }

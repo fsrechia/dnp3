@@ -1,4 +1,4 @@
-#ifndef  HEADER_CUSTOM_DNP3_H
+#ifndef HEADER_CUSTOM_DNP3_H
 #define HEADER_CUSTOM_DNP3_H
 
 #define DNP3_SERVER_PORT 20000
@@ -25,11 +25,11 @@ struct dnp3_link_layer {
 #define DNP3_LL_CTRL_FCB_BIT 0x20        // 1 -> frame count bit (alternates 0 and 1)
 #define DNP3_LL_CTRL_FCV_OR_DFC_BIT 0x10
                                           /* FCV - Frame count valid (1 -> examine FCB, 0 -> ignore FCB)
-                                          * DFC - Data flow control (1 -> buffer full, 0 -> buffer available) 
+                                          * DFC - Data flow control (1 -> buffer full, 0 -> buffer available)
                                           */
-#define DNP3_LL_CTRL_FC_BITS 0x0f  
+#define DNP3_LL_CTRL_FC_BITS 0x0f
                                     /* LINK LAYER Function CODE bits (see section 9.2.4.1.3.6):
-                                    
+                                    *
                                     * if PRM=1
                                     *      (Primary function code, Function code name, Service function, FCV bit, Response function codes permitted from Secondary Station)
                                     *      0, RESET_LINK_STATES, Reset of remote link, FCV 0, responses 0 or 1
@@ -43,7 +43,7 @@ struct dnp3_link_layer {
                                     *      1, NACK, Negative acknowledgment
                                     *      11, LINK_STATUS, Status of the link
                                     *      15, NOT_SUPPORTED, Link service not supported
-                                    */ 
+                                    */
 
 /* Transport layer control fields (this layer is a single byte) */
 #define DNP3_TL_FIN_BIT 0x80   // 1-> Final fragment of the message
@@ -64,7 +64,7 @@ struct dnp3_app_layer_header {
 #define DNP3_AL_UNS_BIT 0x10   // Unsolicited bit
 #define DNP3_AL_SEQ_BIT 0x0f   // 4 bits used for numbering app-level fragments
 
-/* Application layer function codes fields (this layer is a single byte) 
+/* Application layer function codes fields (this layer is a single byte)
  * see DNP3 document section 4.2.2.5 for more details on other Function code octets
  */
 #define DNP3_AL_FC_CONFIRM  0x00   // Confirmation - Confirm Function Code
@@ -98,6 +98,8 @@ DNP3 function prototypes
 
 void computeCRC(unsigned char, unsigned short*);
 int encode_dnp3_message(struct dnp3_message_read_request*);
-int validate_rx_link_layer(unsigned char*, struct dnp3_message_read_request*);
+int generate_crc(unsigned char*, unsigned short, unsigned short*);
+int validate_rx_link_layer(const unsigned char*, struct dnp3_message_read_request*,
+                           const unsigned short*);
 
 #endif // HEADER_CUSTOM_DNP3_H

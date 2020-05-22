@@ -16,6 +16,8 @@ int main(int argc, char const *argv[]) {
     int opt = 1;
     int addrlen = sizeof(address);
     unsigned char buffer[BUFF_SIZE] = {0};
+    unsigned short dnp3_local_address=0x4600;
+    struct dnp3_message_read_request rx_msg;
     char *response = "I got your message!";
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -53,10 +55,9 @@ int main(int argc, char const *argv[]) {
 
     bytesread = read(dnp3_socket, buffer, BUFF_SIZE);
     printf("Message Received (%d bytes)...\n", bytesread);
-    struct dnp3_message_read_request rx_msg;
-    validate_rx_link_layer(buffer, &rx_msg);
-    // TODO implement printing received message header to facilitate debugging
-    // or just use wireshark
+    if (validate_rx_link_layer(buffer, &rx_msg, &dnp3_local_address) < 0) {
+        perror("DNP3 link layer validation failed");
+    }
     send(dnp3_socket, response, strlen(response), 0);
     printf("Response message sent\n");
 
