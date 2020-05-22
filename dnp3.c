@@ -54,13 +54,10 @@ int appendCRC(unsigned char* srcbuffer, unsigned short srclen, unsigned char* ds
     // process remaining bytes for last blocksize < 16 bytes
     if (remaining_bytes > 0) {
         newlength += remaining_bytes + 2;
-        debug("dstbuffer offset = %hu\n", i*(blockSize + 2));
-        debug("srcbuffer offset = %hu\n", i*(blockSize));
         memcpy(dstbuffer + (i*(blockSize + 2)), srcbuffer + (i*blockSize), remaining_bytes);
         // Compute check code
         crc = 0; // Initialize
         for (j = i*(blockSize + 2); j < i*(blockSize + 2) + remaining_bytes; j++) {
-            debug("dstbuffer[%d] %02x\n", j, dstbuffer[j]);
             computeCRC(dstbuffer[j],&crc);
         }
         crc = ~crc; // Invert
@@ -80,25 +77,17 @@ int encode_dnp3_read_resp_message(
     struct dnp3_message_read_response* dnp3_msg,
     unsigned short src,
     unsigned short dst,
-    unsigned char* buffer
+    unsigned char* outbuffer
     )
 {
-    // dummy app layer object list response without CRCs embedded
-    unsigned char app_layer_objs[] = {
-    //0xed, 0x81,
-    //0x06, 0x00,
-    0x04, 0x02, 0x28, 0x04, 0x00, 0xe0, 0x00, 0x81, 0x99,
-    0xd7, 0x74, 0xbd, 0xc2, 0x10, 0x72, 0x01, 0xdc, 0x00, 0x81, 0x99, 0xd7, 0x74,
-    0x10, 0x72, 0x01, 0xdf, 0x00, 0x81, 0x99, 0x1e, 0x9a, 0xd7, 0x74, 0x10, 0x72,
-    0x01, 0xe1, 0x00, 0x81, 0x99, 0xd7, 0x74, 0x10, 0x72, 0x01, 0xbd, 0xf5};
+    // dummy user data = transport + app layer object list response without CRCs embedded
+    unsigned char user_data[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x02, 0x28, 0x04, 0x00, 0xe0, 0x00, 0x81, 0x99, 0xd7, 0x74,
+    0x10, 0x72, 0x01, 0xdc, 0x00, 0x81, 0x99, 0xd7, 0x74, 0x10, 0x72, 0x01, 0xdf, 0x00, 0x81, 0x99,
+    0xd7, 0x74, 0x10, 0x72, 0x01, 0xe1, 0x00, 0x81, 0x99, 0xd7, 0x74, 0x10, 0x72, 0x01};
     unsigned short ll_crc;
-    // debug("dnp3_message_read_response length: %d (%02x)\n", sizeof(struct dnp3_message_read_response), sizeof(struct dnp3_message_read_response));
-    // debug("app_layer_objs length: %d (%02x)\n", sizeof(app_layer_objs), sizeof(app_layer_objs));
-    int length = sizeof(struct dnp3_message_read_response) + sizeof(app_layer_objs);
-    // debug("total msg length, including CRCs: %d (%02x)\n", length, length);
-
-    unsigned short ll_len = sizeof(app_layer_objs) + 5;
-    // debug("ll_len field: %d (%02x)\n", ll_len, ll_len);
+    int length;
+    unsigned short ll_len = sizeof(user_data) + 5; // USER_DATA + SRC + DST + CTRL
 
     memset(dnp3_msg, 0, sizeof(struct dnp3_message_read_response));
     dnp3_msg->ll.magic = htons(0x0564);
@@ -107,15 +96,22 @@ int encode_dnp3_read_resp_message(
     dnp3_msg->ll.dst = htons(dst);
     dnp3_msg->ll.ctrl = DNP3_LL_CTRL_PRM_BIT | (DNP3_LL_CTRL_FC_BITS & 4); // UNCONFIRMED_USER_DATA
     generate_crc((unsigned char*)dnp3_msg, 8, &ll_crc);
-    debug("Header CRC: %04x\n", htons(ll_crc));
     dnp3_msg->ll.crc = htons(ll_crc);
     dnp3_msg->tl = DNP3_TL_FIN_BIT | DNP3_TL_FIR_BIT | 1;
-    dnp3_msg->al_header.ctrl = 0xed; // (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT);
+    dnp3_msg->al_header.ctrl = (DNP3_AL_FIN_BIT | DNP3_AL_FIR_BIT);
     dnp3_msg->al_header.fc = DNP3_AL_FC_RESPONSE;
     dnp3_msg->indications = htons(0x0600);
 
-    memcpy(buffer, dnp3_msg, sizeof(struct dnp3_message_read_response));
-    memcpy(buffer + sizeof(struct dnp3_message_read_response), app_layer_objs, sizeof(app_layer_objs));
+    // copy link layer only
+    length = sizeof(struct dnp3_link_layer);
+    memcpy(outbuffer, dnp3_msg, sizeof(struct dnp3_link_layer));
+    user_data[0] = dnp3_msg->tl;
+    user_data[1] = dnp3_msg->al_header.ctrl;
+    user_data[2] = dnp3_msg->al_header.fc;
+    user_data[3] = dnp3_msg->indications & 0xff;
+    user_data[4] = dnp3_msg->indications >> 8;
+
+    length += appendCRC(user_data, (unsigned short) sizeof(user_data), outbuffer + sizeof(struct dnp3_link_layer));
 
     return length;
 }
