@@ -1,21 +1,93 @@
-# Manual do usuário
+# User manual
 
-How to compile and run:
+How to compile and run (tested only on Windows Linux Subsystem running Ubuntu 20.04
+and a Ubuntu 20.04 VM):
 
 ```
-make master
 make outstation
-./outstation    # in one terminal
-./master        # in another terminal
+make master
+./outstation    # start this first in one terminal
+./master        # start in another terminal while capturing packets
+                # in your loopback adapter in wireshark
 ```
 
-Clean up with `make clean`.
+This is what happens during execution:
+1. When `./outstation` is executed, the outstation starts and listens on `127.0.0.1:20000 (TCP)`;
+2. After `./master` is executed, it connects to the `127.0.0.1:20000` socket and
+sends a DNP3 read request with function code 01 with the following settings
 
-At the moment it doesn't do much, just opens a socket and transmits garbage from
-one side to another. TODO: update this text.
+```
+    Distributed Network Protocol 3.0
+        Data Link Layer, Len: 11, From: 64, To: 70, DIR, PRM, Unconfirmed User Data
+            Start Bytes: 0x0564
+            Length: 11
+            Control: 0xc4 (DIR, PRM, Unconfirmed User Data)
+            Destination: 70
+            Source: 64
+            Data Link Header checksum: 0xfea3 [correct]
+            [Data Link Header Checksum Status: Good]
+        Transport Control: 0xc0, Final, First(FIR, FIN, Sequence 0)
+            1... .... = Final: Set
+            .1.. .... = First: Set
+            ..00 0000 = Sequence: 0
+        Data Chunks
+        [1 DNP 3.0 AL Fragment (5 bytes): #6884(5)]
+        Application Layer: (FIR, FIN, Sequence 13, Read)
+            Application Control: 0xcd, First, Final(FIR, FIN, Sequence 13)
+            Function Code: Read (0x01)
+            READ Request Data Objects
+                Object(s): Class 0 Data (Obj:60, Var:01) (0x3c01)
+```
 
-# Requisitos:
-## Objetivo:
+3. The outstation receives this and calls `validate_rx_link_layer` function to validate the received frame. The following checks are done in this order:
+    - Validation of link layer CRC;
+    - Validation of frame magic number (0x0564);
+    - Conversion from network to host order of dst, src parameters;
+    - Validation of destination addresses (must match local address or special addresses from `0xfffc` to `0xffff`)
+    - TODO: validation of above layers (received user data) is still not done.
+
+4. If the outstation considers the frame minimally valid (see checks above), it replies with a frame crafted by the `encode_dnp3_read_resp_message` function. The lower link layer is filled out with the following data:
+    - magic number, length, and control flags
+    - `source = <local address>`;
+    - `destination = <source address of the previously received frame>`;
+
+5. Still in the `encode_dnp3_read_resp_message` multiple CRCs are calculated for 16-byte blocks of a dummy application layer. Finally, the link layer + user data is copied to an output buffer which is then sent back to the master through the established TCP socket.
+
+At the moment the READ RESPONSE sent from the outstation to the master is not recognized as a DNP3.0 packet by wireshark, there are still improvements to be made.
+
+Most configurable fields are hard-coded into the programs:
+ - Master DNP3 link layer address is 64;
+ - Outstation DNP3 link layer address is 70;
+ - The outstation socket binds to any IPv4 address;
+ - The master socket connects to loopback address;
+
+To run unit tests:
+
+```
+make tests
+./tests
+```
+
+Unit tests cover only a few basic cases to validate some functions.
+
+Clean up with `make clean`. A DEBUG flag may be enabled in the Makefile by adding -DDEBUG in the CFLAGS paremeter:
+
+```diff
+diff --git a/Makefile b/Makefile
+index 90c62ea..31c33a2 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,5 +1,6 @@
+ CC=gcc
+-CFLAGS=-I. -Wall
++CFLAGS=-I. -Wall -DDEBUG
+ DEPS = dnp3.h dnp3.c
+
+ %.o: %.c $(DEPS)
+```
+
+# Requirements (in portuguese)
+## Objetivo
 
 - Desenvolver um programa que simule uma remota DNP3 que responda a função FC 01 (Read).
 - Ao enviar um telegrama o programa deverá executar as seguintes validações: CRC () e o endereço da remota.
@@ -62,3 +134,4 @@ Publique o aplicativo no github, faça pequenos commits para indicar evolução 
 - https://en.wikipedia.org/wiki/DNP3 (overview)
 - https://github.com/ITI/ICS-Security-Tools/tree/master/pcaps (capturas de pacotes DNP3 para facilitar o entendimento)
 - https://www.ixiacom.com/company/blog/scada-distributed-network-protocol-dnp3 (diagrama do DNP3 sobre IP)
+- IEEE 1815-2012 Standard;

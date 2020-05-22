@@ -89,8 +89,8 @@ int test_link_layer_validation() {
 int compare_buffers(unsigned char* buf1, unsigned char* buf2, unsigned short len) {
     int error = 0;
     for (int i = 0; i < len; i++) {
-        debug("buf1[%d] %02x buf2[%d] %02x\n", i, buf1[i], i, buf2[i]);
         if (buf1[i] != buf2[i]) {
+            debug("buf1[%d] %02x buf2[%d] %02x\n", i, buf1[i], i, buf2[i]);
             error = -1;
         }
     }
